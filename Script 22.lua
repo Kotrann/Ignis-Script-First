@@ -99,7 +99,7 @@ local charactersUpdateInterval = 3
 
 local mobileAimButton = nil
 local mobileAimActive = false
-local mobileAimStrength = 0.5
+local mobileAimStrength = 0.8
 
 local raycastParams = RaycastParams.new()
 raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
@@ -1501,6 +1501,68 @@ local function createMenu()
                 end
             end
         end)
+        
+        local methodButton = Instance.new("TextButton")
+        methodButton.Name = "MethodButton"
+        methodButton.Size = UDim2.new(0, 50, 0, 30)
+        methodButton.Position = UDim2.new(0, 0, 0, -35)
+        methodButton.AnchorPoint = Vector2.new(0.5, 0)
+        methodButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        methodButton.BorderSizePixel = 0
+        methodButton.Text = "M:1"
+        methodButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        methodButton.TextSize = 14
+        methodButton.Font = Enum.Font.GothamBold
+        methodButton.Parent = mobileAimButton
+        
+        local methodCorner = Instance.new("UICorner")
+        methodCorner.CornerRadius = UDim.new(0, 6)
+        methodCorner.Parent = methodButton
+        
+        methodButton.MouseButton1Click:Connect(function()
+            local aimMethod = _G.mobileAimMethod or 1
+            aimMethod = aimMethod + 1
+            if aimMethod > 4 then aimMethod = 1 end
+            _G.mobileAimMethod = aimMethod
+            methodButton.Text = "M:" .. aimMethod
+            
+            local methodNames = {
+                [1] = "Lerp Smooth",
+                [2] = "Direct Lock",
+                [3] = "LookVector",
+                [4] = "Euler Angles"
+            }
+            
+            if statusLabel then
+                statusLabel.Text = methodNames[aimMethod] or "M:" .. aimMethod
+                task.wait(1)
+                if not mobileAimActive then
+                    statusLabel.Text = "OFF"
+                end
+            end
+        end)
+        
+        local debugButton = Instance.new("TextButton")
+        debugButton.Name = "DebugButton"
+        debugButton.Size = UDim2.new(0, 30, 0, 30)
+        debugButton.Position = UDim2.new(0, -35, 0, -35)
+        debugButton.AnchorPoint = Vector2.new(0.5, 0)
+        debugButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        debugButton.BorderSizePixel = 0
+        debugButton.Text = "🐛"
+        debugButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        debugButton.TextSize = 16
+        debugButton.Font = Enum.Font.GothamBold
+        debugButton.Parent = mobileAimButton
+        
+        local debugCorner = Instance.new("UICorner")
+        debugCorner.CornerRadius = UDim.new(1, 0)
+        debugCorner.Parent = debugButton
+        
+        debugButton.MouseButton1Click:Connect(function()
+            _G.debugEnabled = not _G.debugEnabled
+            debugButton.BackgroundColor3 = _G.debugEnabled and Color3.fromRGB(0, 180, 0) or Color3.fromRGB(40, 40, 40)
+        end)
     end
     
     if not isMobile then
@@ -1846,8 +1908,50 @@ spawn(function()
 end)
 
 if isMobile then
-    RunService.Heartbeat:Connect(function()
-        if not aiming then return end
+    _G.mobileAimMethod = 1
+    _G.debugEnabled = false
+    
+    local debugLabel = nil
+    
+    local function updateDebugLabel()
+        if not _G.debugEnabled then
+            if debugLabel then
+                debugLabel.Visible = false
+            end
+            return
+        end
+        
+        if not debugLabel then
+            local playerGui = player:WaitForChild("PlayerGui")
+            local debugGui = Instance.new("ScreenGui")
+            debugGui.Name = "AimDebug"
+            debugGui.ResetOnSpawn = false
+            debugGui.Parent = playerGui
+            
+            debugLabel = Instance.new("TextLabel")
+            debugLabel.Size = UDim2.new(0, 300, 0, 100)
+            debugLabel.Position = UDim2.new(0, 10, 0, 100)
+            debugLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+            debugLabel.BackgroundTransparency = 0.5
+            debugLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+            debugLabel.TextSize = 12
+            debugLabel.Font = Enum.Font.Code
+            debugLabel.TextXAlignment = Enum.TextXAlignment.Left
+            debugLabel.TextYAlignment = Enum.TextYAlignment.Top
+            debugLabel.Text = "Debug Info"
+            debugLabel.Parent = debugGui
+        else
+            debugLabel.Visible = true
+        end
+    end
+    
+    RunService.RenderStepped:Connect(function(deltaTime)
+        if not aiming then 
+            if _G.debugEnabled and debugLabel then
+                debugLabel.Text = "Status: Not Aiming"
+            end
+            return 
+        end
         
         if not isTargetValid(lockedTarget, lockedTargetPart) then
             if autoSwitchTarget then
@@ -1914,13 +2018,56 @@ if isMobile then
         
         if lockedTargetPart and lockedTargetPart.Parent then
             local targetPos = lockedTargetPart.Position
-            local cameraCF = camera.CFrame
-            local cameraPos = cameraCF.Position
+            local currentCF = camera.CFrame
+            local cameraPos = currentCF.Position
             
-            local targetDirection = (targetPos - cameraPos).Unit
-            local newCF = CFrame.new(cameraPos, cameraPos + targetDirection)
+            local distance = (targetPos - cameraPos).Magnitude
+            local aimMethod = _G.mobileAimMethod or 1
             
-            camera.CFrame = camera.CFrame:Lerp(newCF, mobileAimStrength)
+            if _G.debugEnabled then
+                updateDebugLabel()
+                if debugLabel then
+                    debugLabel.Text = string.format(
+                        "Status: AIMING\nMethod: %d\nTarget: %s\nDistance: %.1f\nStrength: %.2f\nDelta: %.3f",
+                        aimMethod,
+                        lockedTarget.Name,
+                        distance,
+                        mobileAimStrength,
+                        deltaTime
+                    )
+                end
+            end
+            
+            if aimMethod == 1 then
+                local direction = (targetPos - cameraPos).Unit
+                local newCF = CFrame.new(cameraPos, cameraPos + direction)
+                camera.CFrame = currentCF:Lerp(newCF, mobileAimStrength)
+                
+            elseif aimMethod == 2 then
+                camera.CFrame = CFrame.new(cameraPos, targetPos)
+                
+            elseif aimMethod == 3 then
+                local direction = (targetPos - cameraPos).Unit
+                local targetCF = CFrame.lookAt(cameraPos, targetPos)
+                
+                local currentLook = currentCF.LookVector
+                local targetLook = direction
+                
+                local lerpedLook = currentLook:Lerp(targetLook, mobileAimStrength)
+                camera.CFrame = CFrame.new(cameraPos, cameraPos + lerpedLook)
+                
+            elseif aimMethod == 4 then
+                local targetCFrame = CFrame.new(cameraPos, targetPos)
+                local x, y, z = targetCFrame:ToOrientation()
+                
+                local currentX, currentY, currentZ = currentCF:ToOrientation()
+                
+                local lerpX = currentX + (x - currentX) * mobileAimStrength
+                local lerpY = currentY + (y - currentY) * mobileAimStrength
+                local lerpZ = currentZ + (z - currentZ) * mobileAimStrength
+                
+                camera.CFrame = CFrame.new(cameraPos) * CFrame.fromOrientation(lerpX, lerpY, lerpZ)
+            end
         end
     end)
 else
