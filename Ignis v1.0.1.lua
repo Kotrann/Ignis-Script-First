@@ -99,9 +99,7 @@ local charactersUpdateInterval = 3
 
 local mobileAimButton = nil
 local mobileAimActive = false
-local mobileLastAimUpdate = 0
-local mobileAimUpdateInterval = 0.1
-local mobileAimStrength = 0.2
+local mobileAimStrength = 0.25
 
 local raycastParams = RaycastParams.new()
 raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
@@ -1173,12 +1171,8 @@ local function createMenu()
     end)
 
     if isMobile then
-        createSlider(combatContent, "Aim Strength", 5, 50, mobileAimStrength * 100, function(value)
+        createSlider(combatContent, "Aim Strength", 10, 60, mobileAimStrength * 100, function(value)
             mobileAimStrength = value / 100
-        end)
-        
-        createSlider(combatContent, "Aim Update Rate", 10, 100, mobileAimUpdateInterval * 1000, function(value)
-            mobileAimUpdateInterval = value / 1000
         end)
     end
 
@@ -1758,16 +1752,10 @@ spawn(function()
     end
 end)
 
-RunService.RenderStepped:Connect(function()
-    if not aimEnabled then return end
-    if not aiming then return end
-    
-    if isMobile then
-        local currentTime = tick()
-        if currentTime - mobileLastAimUpdate < mobileAimUpdateInterval then
-            return
-        end
-        mobileLastAimUpdate = currentTime
+if isMobile then
+    RunService.Heartbeat:Connect(function()
+        if not aimEnabled then return end
+        if not aiming then return end
         
         local targetCharacter = findClosestTarget()
         
@@ -1784,7 +1772,12 @@ RunService.RenderStepped:Connect(function()
                 camera.CFrame = cameraCF:Lerp(newCF, mobileAimStrength)
             end
         end
-    else
+    end)
+else
+    RunService.RenderStepped:Connect(function()
+        if not aimEnabled then return end
+        if not aiming then return end
+        
         if not isTargetValid(lockedTarget, lockedTargetPart) then
             if autoSwitchTarget then
                 local newTarget = findClosestTarget()
@@ -1811,8 +1804,8 @@ RunService.RenderStepped:Connect(function()
             local targetPos = lockedTargetPart.Position
             camera.CFrame = CFrame.new(camera.CFrame.Position, targetPos)
         end
-    end
-end)
+    end)
+end
 
 RunService.Heartbeat:Connect(function()
     if not triggerbotEnabled then return end
