@@ -735,7 +735,7 @@ local function createMenu()
     menuButton.Position = UDim2.new(0, 10, 0, 10)
     menuButton.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
     menuButton.BorderSizePixel = 0
-    menuButton.Text = "☰"
+    menuButton.Text = "🔥"
     menuButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     menuButton.TextSize = 28
     menuButton.Font = Enum.Font.GothamBold
@@ -750,52 +750,41 @@ local function createMenu()
         mainFrame.Visible = menuOpen
     end)
     
-    -- Мобильная кнопка аима (только для мобильных)
+    -- Уведомление для мобильных пользователей
     if isMobile then
-        local aimButton = Instance.new("TextButton")
-        aimButton.Name = "AimButton"
-        aimButton.Size = UDim2.new(0, 80, 0, 80)
-        aimButton.Position = UDim2.new(1, -90, 1, -90)
-        aimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-        aimButton.BorderSizePixel = 0
-        aimButton.Text = "🎯"
-        aimButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-        aimButton.TextSize = 40
-        aimButton.Font = Enum.Font.GothamBold
-        aimButton.Parent = screenGui
+        local mobileNotice = Instance.new("TextLabel")
+        mobileNotice.Name = "MobileNotice"
+        mobileNotice.Size = UDim2.new(0, 300, 0, 60)
+        mobileNotice.Position = UDim2.new(0.5, -150, 0, 70)
+        mobileNotice.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        mobileNotice.BorderSizePixel = 0
+        mobileNotice.Text = "⚠️ Aimbot is not available on mobile devices"
+        mobileNotice.TextColor3 = Color3.fromRGB(255, 200, 0)
+        mobileNotice.TextSize = 14
+        mobileNotice.Font = Enum.Font.GothamBold
+        mobileNotice.TextWrapped = true
+        mobileNotice.Parent = screenGui
         
-        local aimBtnCorner = Instance.new("UICorner")
-        aimBtnCorner.CornerRadius = UDim.new(1, 0) -- Круглая кнопка
-        aimBtnCorner.Parent = aimButton
+        local noticeCorner = Instance.new("UICorner")
+        noticeCorner.CornerRadius = UDim.new(0, 8)
+        noticeCorner.Parent = mobileNotice
         
-        -- Прозрачность
-        aimButton.BackgroundTransparency = 0.3
-        
-        -- Нажатие и удержание
-        aimButton.MouseButton1Down:Connect(function()
-            if not aimEnabled then return end
-            
-            local targetCharacter = findClosestTarget()
-            
-            if targetCharacter then
-                aiming = true
-                lockedTarget = targetCharacter
-                local part, partName = selectTargetPart(targetCharacter)
-                lockedTargetPart = part
-                aimButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0) -- Зелёный когда активен
-                print("🔒 Target LOCKED:", targetCharacter.Name, "| Part:", partName)
-            end
+        -- Автоматически скрыть через 5 секунд
+        spawn(function()
+            wait(5)
+            mobileNotice:TweenPosition(
+                UDim2.new(0.5, -150, 0, -70),
+                Enum.EasingDirection.In,
+                Enum.EasingStyle.Quad,
+                0.5,
+                true,
+                function()
+                    mobileNotice:Destroy()
+                end
+            )
         end)
         
-        aimButton.MouseButton1Up:Connect(function()
-            if aiming then
-                aiming = false
-                aimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60) -- Обратно в серый
-                print("🔓 Target UNLOCKED")
-                lockedTarget = nil
-                lockedTargetPart = nil
-            end
-        end)
+        print("📱 Mobile device detected - Aimbot disabled")
     end
     
     -- Открытие/закрытие на RightShift (для ПК)
@@ -1021,7 +1010,7 @@ local function createKeySystem()
             description.Size = UDim2.new(1, -70, 0, 35)
             description.Position = UDim2.new(0, 65, 0, 35)
             description.BackgroundTransparency = 1
-            description.Text = "Press RightShift or click ☰ button to open menu"
+            description.Text = "Press RightShift or click 🔥 button to open menu"
             description.TextColor3 = Color3.fromRGB(200, 200, 200)
             description.TextSize = 13
             description.Font = Enum.Font.Gotham
@@ -1058,7 +1047,7 @@ local function createKeySystem()
             -- Print information
             print("=" .. string.rep("=", 50))
             print("🔥 Ignis loaded successfully!")
-            print("💡 Press RightShift or click ☰ button to open the menu!")
+            print("💡 Press RightShift or click 🔥 button to open the menu!")
             print("=" .. string.rep("=", 50))
             print("")
             print("🐛 DEBUG COMMANDS:")
@@ -1107,7 +1096,7 @@ local function createKeySystem()
             print("   • HP bar:", showHealthBar and "✅ Enabled" or "❌ Disabled")
             print("   • Names:", showNames and "✅ Enabled" or "❌ Disabled")
             print("=" .. string.rep("=", 50))
-            print("🚀 All features active! Press RightShift or click ☰ to toggle menu")
+            print("🚀 All features active! Press RightShift or click 🔥 to toggle menu")
             print("=" .. string.rep("=", 50))
             
         else
@@ -1952,6 +1941,7 @@ end
 -- ============ АКТИВАЦИЯ АИМА ============
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if not aimEnabled then return end
+    if isMobile then return end -- Отключено на мобильных
     
     if input.KeyCode == aimKey then
         if not aiming then
@@ -1971,6 +1961,8 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 UserInputService.InputEnded:Connect(function(input)
+    if isMobile then return end -- Отключено на мобильных
+    
     if input.KeyCode == aimKey then
         if aiming then
             aiming = false
@@ -2014,6 +2006,7 @@ end)
 RunService.RenderStepped:Connect(function()
     if not aimEnabled then return end
     if not aiming then return end
+    if isMobile then return end -- Отключено на мобильных
     
     -- Проверяем валидность текущей цели
     if not isTargetValid(lockedTarget, lockedTargetPart) then
