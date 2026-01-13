@@ -54,10 +54,8 @@ local camera = workspace.CurrentCamera
 local mouse = player:GetMouse()
 
 -- ============ ПРОВЕРКА НА МОБИЛЬНОЕ УСТРОЙСТВО ============
-if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
-    player:Kick("❌ Mobile devices are not supported! Please use PC.")
-    return
-end
+local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+print("📱 Mobile device:", isMobile)
 
 -- ============ НАСТРОЙКИ АИМА ============
 local aimEnabled = false -- Включить/выключить аим
@@ -730,7 +728,77 @@ local function createMenu()
     -- Помещаем в PlayerGui
     screenGui.Parent = player:WaitForChild("PlayerGui")
     
-    -- Открытие/закрытие на RightShift
+    -- Кнопка открытия меню (для мобильных и удобства)
+    local menuButton = Instance.new("TextButton")
+    menuButton.Name = "MenuButton"
+    menuButton.Size = UDim2.new(0, 50, 0, 50)
+    menuButton.Position = UDim2.new(0, 10, 0, 10)
+    menuButton.BackgroundColor3 = Color3.fromRGB(255, 140, 0)
+    menuButton.BorderSizePixel = 0
+    menuButton.Text = "☰"
+    menuButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    menuButton.TextSize = 28
+    menuButton.Font = Enum.Font.GothamBold
+    menuButton.Parent = screenGui
+    
+    local menuBtnCorner = Instance.new("UICorner")
+    menuBtnCorner.CornerRadius = UDim.new(0, 8)
+    menuBtnCorner.Parent = menuButton
+    
+    menuButton.MouseButton1Click:Connect(function()
+        menuOpen = not menuOpen
+        mainFrame.Visible = menuOpen
+    end)
+    
+    -- Мобильная кнопка аима (только для мобильных)
+    if isMobile then
+        local aimButton = Instance.new("TextButton")
+        aimButton.Name = "AimButton"
+        aimButton.Size = UDim2.new(0, 80, 0, 80)
+        aimButton.Position = UDim2.new(1, -90, 1, -90)
+        aimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        aimButton.BorderSizePixel = 0
+        aimButton.Text = "🎯"
+        aimButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        aimButton.TextSize = 40
+        aimButton.Font = Enum.Font.GothamBold
+        aimButton.Parent = screenGui
+        
+        local aimBtnCorner = Instance.new("UICorner")
+        aimBtnCorner.CornerRadius = UDim.new(1, 0) -- Круглая кнопка
+        aimBtnCorner.Parent = aimButton
+        
+        -- Прозрачность
+        aimButton.BackgroundTransparency = 0.3
+        
+        -- Нажатие и удержание
+        aimButton.MouseButton1Down:Connect(function()
+            if not aimEnabled then return end
+            
+            local targetCharacter = findClosestTarget()
+            
+            if targetCharacter then
+                aiming = true
+                lockedTarget = targetCharacter
+                local part, partName = selectTargetPart(targetCharacter)
+                lockedTargetPart = part
+                aimButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0) -- Зелёный когда активен
+                print("🔒 Target LOCKED:", targetCharacter.Name, "| Part:", partName)
+            end
+        end)
+        
+        aimButton.MouseButton1Up:Connect(function()
+            if aiming then
+                aiming = false
+                aimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60) -- Обратно в серый
+                print("🔓 Target UNLOCKED")
+                lockedTarget = nil
+                lockedTargetPart = nil
+            end
+        end)
+    end
+    
+    -- Открытие/закрытие на RightShift (для ПК)
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if input.KeyCode == Enum.KeyCode.RightShift then
             menuOpen = not menuOpen
@@ -805,7 +873,7 @@ local function createKeySystem()
     description.Size = UDim2.new(1, -40, 0, 30)
     description.Position = UDim2.new(0, 20, 0, 75)
     description.BackgroundTransparency = 1
-    description.Text = "Enter your key to continue"
+    description.Text = "Enter your key to continue (Universal key: IGNIS)"
     description.TextColor3 = Color3.fromRGB(200, 200, 200)
     description.TextSize = 14
     description.Font = Enum.Font.Gotham
@@ -953,7 +1021,7 @@ local function createKeySystem()
             description.Size = UDim2.new(1, -70, 0, 35)
             description.Position = UDim2.new(0, 65, 0, 35)
             description.BackgroundTransparency = 1
-            description.Text = "Press RightShift to open menu"
+            description.Text = "Press RightShift or click ☰ button to open menu"
             description.TextColor3 = Color3.fromRGB(200, 200, 200)
             description.TextSize = 13
             description.Font = Enum.Font.Gotham
@@ -990,7 +1058,7 @@ local function createKeySystem()
             -- Print information
             print("=" .. string.rep("=", 50))
             print("🔥 Ignis loaded successfully!")
-            print("💡 Press RightShift to open the menu!")
+            print("💡 Press RightShift or click ☰ button to open the menu!")
             print("=" .. string.rep("=", 50))
             print("")
             print("🐛 DEBUG COMMANDS:")
@@ -1039,7 +1107,7 @@ local function createKeySystem()
             print("   • HP bar:", showHealthBar and "✅ Enabled" or "❌ Disabled")
             print("   • Names:", showNames and "✅ Enabled" or "❌ Disabled")
             print("=" .. string.rep("=", 50))
-            print("🚀 All features active! Press RightShift to toggle menu")
+            print("🚀 All features active! Press RightShift or click ☰ to toggle menu")
             print("=" .. string.rep("=", 50))
             
         else
@@ -1412,8 +1480,8 @@ local function createESP(character)
     billboard.Name = "ESP_Billboard"
     billboard.AlwaysOnTop = true
     billboard.Enabled = true
-    billboard.Size = UDim2.new(4, 0, 5.5, 0) -- Увеличил размер
-    billboard.StudsOffset = Vector3.new(0, -0.2, 0) -- Поднял выше
+    billboard.Size = UDim2.new(6, 0, 7, 0) -- Увеличил размер
+    billboard.StudsOffset = Vector3.new(0, 2, 0) -- Поднял выше
     billboard.Parent = espFolder
     
     -- Бокс (4 линии через Frame)
