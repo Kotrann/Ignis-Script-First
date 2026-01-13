@@ -387,8 +387,8 @@ local function createESP(character)
     billboard.Name = "ESP_Billboard"
     billboard.AlwaysOnTop = true
     billboard.Enabled = true
-    billboard.Size = UDim2.new(6, 0, 7, 0)
-    billboard.StudsOffset = Vector3.new(0, 2, 0)
+    billboard.Size = UDim2.new(4, 0, 5.5, 0)
+    billboard.StudsOffset = Vector3.new(0, -0.2, 0)
     billboard.Parent = espFolder
     
     local boxLines = {}
@@ -1486,7 +1486,7 @@ local function createKeySystem()
     description.Size = UDim2.new(1, -40, 0, 30)
     description.Position = UDim2.new(0, 20, 0, 75)
     description.BackgroundTransparency = 1
-    description.Text = "Enter your key to continue (Universal key: IGNIS)"
+    description.Text = "Enter your key to continue"
     description.TextColor3 = Color3.fromRGB(200, 200, 200)
     description.TextSize = 14
     description.Font = Enum.Font.Gotham
