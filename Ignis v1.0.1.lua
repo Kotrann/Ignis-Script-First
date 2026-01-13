@@ -1170,12 +1170,6 @@ local function createMenu()
         end
     end)
 
-    if isMobile then
-        createSlider(combatContent, "Aim Strength", 10, 60, mobileAimStrength * 100, function(value)
-            mobileAimStrength = value / 100
-        end)
-    end
-
     createCheckbox(combatContent, "Show FOV Circle", showFOV, function(value)
         showFOV = value
         
@@ -1375,15 +1369,15 @@ local function createMenu()
     if isMobile then
         mobileAimButton = Instance.new("TextButton")
         mobileAimButton.Name = "MobileAimButton"
-        mobileAimButton.Size = UDim2.new(0, 70, 0, 70)
-        mobileAimButton.Position = UDim2.new(1, -80, 1, -150)
+        mobileAimButton.Size = UDim2.new(0, 80, 0, 80)
+        mobileAimButton.Position = UDim2.new(1, -90, 0.5, -40)
         mobileAimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
         mobileAimButton.BorderSizePixel = 0
         mobileAimButton.Text = "🎯"
         mobileAimButton.TextColor3 = Color3.fromRGB(255, 255, 255)
         mobileAimButton.TextSize = 32
         mobileAimButton.Font = Enum.Font.GothamBold
-        mobileAimButton.Visible = false
+        mobileAimButton.Visible = true
         mobileAimButton.Parent = screenGui
         
         local aimBtnCorner = Instance.new("UICorner")
@@ -1399,8 +1393,20 @@ local function createMenu()
             mobileAimActive = not mobileAimActive
             
             if mobileAimActive then
-                mobileAimButton.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
-                aiming = true
+                local targetCharacter = findClosestTarget()
+                
+                if targetCharacter then
+                    aiming = true
+                    lockedTarget = targetCharacter
+                    local part, partName = selectTargetPart(targetCharacter)
+                    lockedTargetPart = part
+                    mobileAimButton.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
+                else
+                    mobileAimActive = false
+                    mobileAimButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+                    wait(0.5)
+                    mobileAimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+                end
             else
                 mobileAimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
                 aiming = false
@@ -1753,24 +1759,42 @@ spawn(function()
 end)
 
 if isMobile then
-    RunService.Heartbeat:Connect(function()
-        if not aimEnabled then return end
+    RunService.RenderStepped:Connect(function()
         if not aiming then return end
         
-        local targetCharacter = findClosestTarget()
-        
-        if targetCharacter then
-            local targetPart = selectTargetPart(targetCharacter)
-            if targetPart and targetPart.Parent then
-                local targetPos = targetPart.Position
-                local cameraCF = camera.CFrame
-                local cameraPos = cameraCF.Position
+        if not isTargetValid(lockedTarget, lockedTargetPart) then
+            if autoSwitchTarget then
+                local newTarget = findClosestTarget()
                 
-                local targetDirection = (targetPos - cameraPos).Unit
-                local newCF = CFrame.lookAt(cameraPos, cameraPos + targetDirection)
-                
-                camera.CFrame = cameraCF:Lerp(newCF, mobileAimStrength)
+                if newTarget then
+                    lockedTarget = newTarget
+                    local part, partName = selectTargetPart(newTarget)
+                    lockedTargetPart = part
+                else
+                    aiming = false
+                    lockedTarget = nil
+                    lockedTargetPart = nil
+                    mobileAimActive = false
+                    if mobileAimButton then
+                        mobileAimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+                    end
+                    return
+                end
+            else
+                aiming = false
+                lockedTarget = nil
+                lockedTargetPart = nil
+                mobileAimActive = false
+                if mobileAimButton then
+                    mobileAimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+                end
+                return
             end
+        end
+        
+        if lockedTargetPart and lockedTargetPart.Parent then
+            local targetPos = lockedTargetPart.Position
+            camera.CFrame = CFrame.new(camera.CFrame.Position, targetPos)
         end
     end)
 else
