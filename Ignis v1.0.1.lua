@@ -1369,8 +1369,8 @@ local function createMenu()
     if isMobile then
         mobileAimButton = Instance.new("TextButton")
         mobileAimButton.Name = "MobileAimButton"
-        mobileAimButton.Size = UDim2.new(0, 80, 0, 80)
-        mobileAimButton.Position = UDim2.new(1, -90, 0.5, -40)
+        mobileAimButton.Size = UDim2.new(0, 70, 0, 70)
+        mobileAimButton.Position = UDim2.new(1, -80, 1, -150)
         mobileAimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
         mobileAimButton.BorderSizePixel = 0
         mobileAimButton.Text = "🎯"
@@ -1394,18 +1394,14 @@ local function createMenu()
             
             if mobileAimActive then
                 local targetCharacter = findClosestTarget()
-                
                 if targetCharacter then
                     aiming = true
                     lockedTarget = targetCharacter
-                    local part, partName = selectTargetPart(targetCharacter)
+                    local part = selectTargetPart(targetCharacter)
                     lockedTargetPart = part
                     mobileAimButton.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
                 else
                     mobileAimActive = false
-                    mobileAimButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-                    wait(0.5)
-                    mobileAimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
                 end
             else
                 mobileAimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
@@ -1763,33 +1759,14 @@ if isMobile then
         if not aiming then return end
         
         if not isTargetValid(lockedTarget, lockedTargetPart) then
-            if autoSwitchTarget then
-                local newTarget = findClosestTarget()
-                
-                if newTarget then
-                    lockedTarget = newTarget
-                    local part, partName = selectTargetPart(newTarget)
-                    lockedTargetPart = part
-                else
-                    aiming = false
-                    lockedTarget = nil
-                    lockedTargetPart = nil
-                    mobileAimActive = false
-                    if mobileAimButton then
-                        mobileAimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-                    end
-                    return
-                end
-            else
-                aiming = false
-                lockedTarget = nil
-                lockedTargetPart = nil
-                mobileAimActive = false
-                if mobileAimButton then
-                    mobileAimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-                end
-                return
+            aiming = false
+            lockedTarget = nil
+            lockedTargetPart = nil
+            mobileAimActive = false
+            if mobileAimButton then
+                mobileAimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
             end
+            return
         end
         
         if lockedTargetPart and lockedTargetPart.Parent then
