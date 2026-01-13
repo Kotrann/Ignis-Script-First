@@ -99,6 +99,9 @@ local charactersUpdateInterval = 3
 
 local mobileAimButton = nil
 local mobileAimActive = false
+local mobileLastAimUpdate = 0
+local mobileAimUpdateInterval = 0.1
+local mobileAimStrength = 0.2
 
 local raycastParams = RaycastParams.new()
 raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
@@ -1169,6 +1172,16 @@ local function createMenu()
         end
     end)
 
+    if isMobile then
+        createSlider(combatContent, "Aim Strength", 5, 50, mobileAimStrength * 100, function(value)
+            mobileAimStrength = value / 100
+        end)
+        
+        createSlider(combatContent, "Aim Update Rate", 10, 100, mobileAimUpdateInterval * 1000, function(value)
+            mobileAimUpdateInterval = value / 1000
+        end)
+    end
+
     createCheckbox(combatContent, "Show FOV Circle", showFOV, function(value)
         showFOV = value
         
@@ -1393,13 +1406,7 @@ local function createMenu()
             
             if mobileAimActive then
                 mobileAimButton.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
-                local targetCharacter = findClosestTarget()
-                if targetCharacter then
-                    aiming = true
-                    lockedTarget = targetCharacter
-                    local part, partName = selectTargetPart(targetCharacter)
-                    lockedTargetPart = part
-                end
+                aiming = true
             else
                 mobileAimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
                 aiming = false
@@ -1755,39 +1762,55 @@ RunService.RenderStepped:Connect(function()
     if not aimEnabled then return end
     if not aiming then return end
     
-    if not isTargetValid(lockedTarget, lockedTargetPart) then
-        if autoSwitchTarget then
-            local newTarget = findClosestTarget()
-            
-            if newTarget then
-                lockedTarget = newTarget
-                local part, partName = selectTargetPart(newTarget)
-                lockedTargetPart = part
+    if isMobile then
+        local currentTime = tick()
+        if currentTime - mobileLastAimUpdate < mobileAimUpdateInterval then
+            return
+        end
+        mobileLastAimUpdate = currentTime
+        
+        local targetCharacter = findClosestTarget()
+        
+        if targetCharacter then
+            local targetPart = selectTargetPart(targetCharacter)
+            if targetPart and targetPart.Parent then
+                local targetPos = targetPart.Position
+                local cameraCF = camera.CFrame
+                local cameraPos = cameraCF.Position
+                
+                local targetDirection = (targetPos - cameraPos).Unit
+                local newCF = CFrame.lookAt(cameraPos, cameraPos + targetDirection)
+                
+                camera.CFrame = cameraCF:Lerp(newCF, mobileAimStrength)
+            end
+        end
+    else
+        if not isTargetValid(lockedTarget, lockedTargetPart) then
+            if autoSwitchTarget then
+                local newTarget = findClosestTarget()
+                
+                if newTarget then
+                    lockedTarget = newTarget
+                    local part, partName = selectTargetPart(newTarget)
+                    lockedTargetPart = part
+                else
+                    aiming = false
+                    lockedTarget = nil
+                    lockedTargetPart = nil
+                    return
+                end
             else
                 aiming = false
                 lockedTarget = nil
                 lockedTargetPart = nil
-                if isMobile and mobileAimButton then
-                    mobileAimActive = false
-                    mobileAimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-                end
                 return
             end
-        else
-            aiming = false
-            lockedTarget = nil
-            lockedTargetPart = nil
-            if isMobile and mobileAimButton then
-                mobileAimActive = false
-                mobileAimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-            end
-            return
         end
-    end
-    
-    if lockedTargetPart and lockedTargetPart.Parent then
-        local targetPos = lockedTargetPart.Position
-        camera.CFrame = CFrame.new(camera.CFrame.Position, targetPos)
+        
+        if lockedTargetPart and lockedTargetPart.Parent then
+            local targetPos = lockedTargetPart.Position
+            camera.CFrame = CFrame.new(camera.CFrame.Position, targetPos)
+        end
     end
 end)
 
