@@ -99,7 +99,7 @@ local charactersUpdateInterval = 3
 
 local mobileAimButton = nil
 local mobileAimActive = false
-local mobileAimStrength = 0.25
+local mobileAimStrength = 0.5
 
 local raycastParams = RaycastParams.new()
 raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
@@ -1375,15 +1375,15 @@ local function createMenu()
     if isMobile then
         mobileAimButton = Instance.new("TextButton")
         mobileAimButton.Name = "MobileAimButton"
-        mobileAimButton.Size = UDim2.new(0, 70, 0, 70)
-        mobileAimButton.Position = UDim2.new(1, -80, 1, -150)
+        mobileAimButton.Size = UDim2.new(0, 80, 0, 80)
+        mobileAimButton.Position = UDim2.new(1, -90, 0.5, -40)
         mobileAimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
         mobileAimButton.BorderSizePixel = 0
         mobileAimButton.Text = "🎯"
         mobileAimButton.TextColor3 = Color3.fromRGB(255, 255, 255)
         mobileAimButton.TextSize = 32
         mobileAimButton.Font = Enum.Font.GothamBold
-        mobileAimButton.Visible = false
+        mobileAimButton.Visible = true
         mobileAimButton.Parent = screenGui
         
         local aimBtnCorner = Instance.new("UICorner")
@@ -1395,12 +1395,54 @@ local function createMenu()
         aimBtnStroke.Thickness = 3
         aimBtnStroke.Parent = mobileAimButton
         
+        local statusLabel = Instance.new("TextLabel")
+        statusLabel.Name = "StatusLabel"
+        statusLabel.Size = UDim2.new(1, 0, 0, 16)
+        statusLabel.Position = UDim2.new(0, 0, 1, 2)
+        statusLabel.BackgroundTransparency = 1
+        statusLabel.Text = "OFF"
+        statusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+        statusLabel.TextSize = 12
+        statusLabel.Font = Enum.Font.GothamBold
+        statusLabel.TextStrokeTransparency = 0.5
+        statusLabel.Parent = mobileAimButton
+        
+        local dragging = false
+        local dragStart = nil
+        local startPos = nil
+        
+        mobileAimButton.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                dragStart = input.Position
+                startPos = mobileAimButton.Position
+                
+                input.Changed:Connect(function()
+                    if input.UserInputState == Enum.UserInputState.End then
+                        dragging = false
+                    end
+                end)
+            end
+        end)
+        
+        mobileAimButton.InputChanged:Connect(function(input)
+            if dragging and input.UserInputType == Enum.UserInputType.Touch then
+                local delta = input.Position - dragStart
+                mobileAimButton.Position = UDim2.new(
+                    startPos.X.Scale, startPos.X.Offset + delta.X,
+                    startPos.Y.Scale, startPos.Y.Offset + delta.Y
+                )
+            end
+        end)
+        
         mobileAimButton.MouseButton1Click:Connect(function()
-            if not aimEnabled then return end
-            
             mobileAimActive = not mobileAimActive
             
+            local statusLabel = mobileAimButton:FindFirstChild("StatusLabel")
+            
             if mobileAimActive then
+                aimEnabled = true
+                
                 local targetCharacter = findClosestTarget()
                 
                 if targetCharacter then
@@ -1409,14 +1451,54 @@ local function createMenu()
                     local part, partName = selectTargetPart(targetCharacter)
                     lockedTargetPart = part
                     mobileAimButton.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
+                    
+                    local aimStroke = mobileAimButton:FindFirstChildOfClass("UIStroke")
+                    if aimStroke then
+                        aimStroke.Color = Color3.fromRGB(0, 255, 0)
+                    end
+                    
+                    if statusLabel then
+                        statusLabel.Text = "LOCKED"
+                        statusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+                    end
                 else
                     mobileAimActive = false
+                    mobileAimButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+                    
+                    local aimStroke = mobileAimButton:FindFirstChildOfClass("UIStroke")
+                    if aimStroke then
+                        aimStroke.Color = Color3.fromRGB(255, 0, 0)
+                    end
+                    
+                    if statusLabel then
+                        statusLabel.Text = "NO TARGET"
+                        statusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+                    end
+                    
+                    wait(0.5)
+                    mobileAimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+                    if aimStroke then
+                        aimStroke.Color = Color3.fromRGB(255, 140, 0)
+                    end
+                    if statusLabel then
+                        statusLabel.Text = "OFF"
+                    end
                 end
             else
                 mobileAimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
                 aiming = false
                 lockedTarget = nil
                 lockedTargetPart = nil
+                
+                local aimStroke = mobileAimButton:FindFirstChildOfClass("UIStroke")
+                if aimStroke then
+                    aimStroke.Color = Color3.fromRGB(255, 140, 0)
+                end
+                
+                if statusLabel then
+                    statusLabel.Text = "OFF"
+                    statusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+                end
             end
         end)
     end
@@ -1765,7 +1847,6 @@ end)
 
 if isMobile then
     RunService.Heartbeat:Connect(function()
-        if not aimEnabled then return end
         if not aiming then return end
         
         if not isTargetValid(lockedTarget, lockedTargetPart) then
@@ -1779,6 +1860,15 @@ if isMobile then
                     
                     if mobileAimButton then
                         mobileAimButton.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
+                        local aimStroke = mobileAimButton:FindFirstChildOfClass("UIStroke")
+                        if aimStroke then
+                            aimStroke.Color = Color3.fromRGB(0, 255, 0)
+                        end
+                        local statusLabel = mobileAimButton:FindFirstChild("StatusLabel")
+                        if statusLabel then
+                            statusLabel.Text = "LOCKED"
+                            statusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+                        end
                     end
                 else
                     aiming = false
@@ -1788,6 +1878,15 @@ if isMobile then
                     
                     if mobileAimButton then
                         mobileAimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+                        local aimStroke = mobileAimButton:FindFirstChildOfClass("UIStroke")
+                        if aimStroke then
+                            aimStroke.Color = Color3.fromRGB(255, 140, 0)
+                        end
+                        local statusLabel = mobileAimButton:FindFirstChild("StatusLabel")
+                        if statusLabel then
+                            statusLabel.Text = "OFF"
+                            statusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+                        end
                     end
                     return
                 end
@@ -1799,6 +1898,15 @@ if isMobile then
                 
                 if mobileAimButton then
                     mobileAimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+                    local aimStroke = mobileAimButton:FindFirstChildOfClass("UIStroke")
+                    if aimStroke then
+                        aimStroke.Color = Color3.fromRGB(255, 140, 0)
+                    end
+                    local statusLabel = mobileAimButton:FindFirstChild("StatusLabel")
+                    if statusLabel then
+                        statusLabel.Text = "OFF"
+                        statusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+                    end
                 end
                 return
             end
@@ -1810,9 +1918,9 @@ if isMobile then
             local cameraPos = cameraCF.Position
             
             local targetDirection = (targetPos - cameraPos).Unit
-            local newCF = CFrame.lookAt(cameraPos, cameraPos + targetDirection)
+            local newCF = CFrame.new(cameraPos, cameraPos + targetDirection)
             
-            camera.CFrame = cameraCF:Lerp(newCF, mobileAimStrength)
+            camera.CFrame = camera.CFrame:Lerp(newCF, mobileAimStrength)
         end
     end)
 else
@@ -1946,6 +2054,15 @@ player.CharacterAdded:Connect(function()
     
     if isMobile and mobileAimButton then
         mobileAimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        local aimStroke = mobileAimButton:FindFirstChildOfClass("UIStroke")
+        if aimStroke then
+            aimStroke.Color = Color3.fromRGB(255, 140, 0)
+        end
+        local statusLabel = mobileAimButton:FindFirstChild("StatusLabel")
+        if statusLabel then
+            statusLabel.Text = "OFF"
+            statusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+        end
     end
     
     if speedhackEnabled then
