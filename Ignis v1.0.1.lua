@@ -14,7 +14,7 @@ local supportedGames = {
         link = "https://link-hub.net/2973424/y0nX4fvHfFyk"
     },
     ["Quick Shot"] = {
-        key = "djgjsdfhfl"
+        key = "djgjsklfghlkdfnwelljhijgbndfhfl"
         link = "https://link.com"
     }
 }
