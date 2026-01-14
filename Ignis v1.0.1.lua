@@ -12,6 +12,10 @@ local supportedGames = {
     ["Flick"] = {
         key = "JFtzEY1d9LSRQ0oClcAfUBnNC",
         link = "https://link-hub.net/2973424/y0nX4fvHfFyk"
+    },
+    ["Quick Shot"] = {
+        key = "djgjsdfhfl"
+        link = "https://link.com"
     }
 }
 
