@@ -14,9 +14,9 @@ local supportedGames = {
         link = "https://link-hub.net/2973424/y0nX4fvHfFyk"
     },
     ["Quick Shot"] = {
-        key = "djgjsklfghlkdfnwelljhijgbndfhfl"
+        key = "djgjsklfghlkdfnwelljhijgbndfhfl",
         link = "https://link.com"
-    },
+    }
 }
 
 local Players = game:GetService("Players")
