@@ -16,6 +16,10 @@ local supportedGames = {
     ["Quick Shot"] = {
         key = "djgjsklfghlkdfnwelljhijgbndfhfl",
         link = "https://link.com"
+    },
+    ["One Shot"] = {
+        key = "djgjsklfghlkdfnwelljhijgbndfhfl",
+        link = "https://link.com"
     }
 }
 
