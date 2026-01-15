@@ -25,7 +25,7 @@ local supportedGames = {
         key = "djgjsklfghlkdfnwelljhijgbndfhfl",
         link = "https://link.com"
     }
-
+}
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
