@@ -20,8 +20,11 @@ local supportedGames = {
     ["One Shot"] = {
         key = "djgjsklfghlkdfnwelljhijgbndfhfl",
         link = "https://link.com"
+    },
+    ["CRAB ROYALE"] = {
+        key = "djgjsklfghlkdfnwelljhijgbndfhfl",
+        link = "https://link.com"
     }
-}
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
