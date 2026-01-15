@@ -17,7 +17,7 @@ local supportedGames = {
         key = "djgjsklfghlkdfnwelljhijgbndfhfl",
         link = "https://link.com"
     },
-    ["One Shot"] = {
+    ["CRAB ROYALE"] = {
         key = "djgjsklfghlkdfnwelljhijgbndfhfl",
         link = "https://link.com"
     }
