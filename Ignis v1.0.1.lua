@@ -17,11 +17,12 @@ local supportedGames = {
         key = "djgjsklfghlkdfnwelljhijgbndfhfl",
         link = "https://link.com"
     },
-    ["CRAB"] = {
+    ["One Shot"] = {
         key = "djgjsklfghlkdfnwelljhijgbndfhfl",
         link = "https://link.com"
     }
 }
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -33,12 +34,32 @@ local mouse = player:GetMouse()
 
 local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 
-local gameName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
+local gameName = "Unknown Game"
+local success, result = pcall(function()
+    return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
+end)
+
+if success and result then
+    gameName = result
+else
+    local fallbackNames = {
+        [game.PlaceId] = game.Name,
+        [0] = workspace.Name
+    }
+    gameName = fallbackNames[game.PlaceId] or game.Name or "Unknown"
+end
 
 local currentGame = nil
-local detectedGameName = nil
+local detectedGameName = "Universal"
+
 for gameKey, gameData in pairs(supportedGames) do
-    if string.find(gameName, gameKey) or string.find(string.lower(gameName), string.lower(gameKey)) then
+    local nameCheck = gameName and (
+        string.find(string.lower(gameName), string.lower(gameKey)) or
+        string.find(string.lower(game.Name or ""), string.lower(gameKey)) or
+        string.find(string.lower(workspace.Name or ""), string.lower(gameKey))
+    )
+    
+    if nameCheck then
         currentGame = gameData
         detectedGameName = gameKey
         break
@@ -46,8 +67,11 @@ for gameKey, gameData in pairs(supportedGames) do
 end
 
 if not currentGame then
-    player:Kick("❌ Game is not supported!\n\n📛 Game name: " .. gameName .. "\n\n🎮 Supported games:\n• Fate Trigger\n• SNIPER DUELS\n• Flick")
-    return
+    currentGame = {
+        key = UNIVERSAL_KEY,
+        link = "https://link.com"
+    }
+    detectedGameName = "Universal (Auto-detected)"
 end
 
 local validKey = currentGame.key
@@ -61,6 +85,9 @@ local hitChances = {Head = 70, Torso = 30}
 local showFOV = false
 local wallCheck = true
 local autoSwitchTarget = true
+local aimSmoothness = 0.2
+local autoAim = false
+local smoothAim = true
 
 local speedhackEnabled = false
 local speedMultiplier = 1
@@ -1196,6 +1223,18 @@ local function createMenu()
     createCheckbox(combatContent, "Auto Switch Target", autoSwitchTarget, function(value)
         autoSwitchTarget = value
     end)
+    
+    createCheckbox(combatContent, "Auto Aim", autoAim, function(value)
+        autoAim = value
+    end)
+    
+    createCheckbox(combatContent, "Smooth Aim", smoothAim, function(value)
+        smoothAim = value
+    end)
+    
+    createSlider(combatContent, "Aim Smoothness", 5, 50, aimSmoothness * 100, function(value)
+        aimSmoothness = value / 100
+    end)
 
     createSlider(combatContent, "Head Chance %", 0, 100, hitChances.Head, function(value)
         hitChances.Head = value
@@ -1224,6 +1263,7 @@ local function createMenu()
             end
         end
     end)
+    
     
     createSlider(combatContent, "Speed Multiplier", 1, 5, speedMultiplier, function(value)
         speedMultiplier = value
@@ -1376,8 +1416,8 @@ local function createMenu()
     if isMobile then
         mobileAimButton = Instance.new("TextButton")
         mobileAimButton.Name = "MobileAimButton"
-        mobileAimButton.Size = UDim2.new(0, 80, 0, 80)
-        mobileAimButton.Position = UDim2.new(1, -90, 0.5, -40)
+        mobileAimButton.Size = UDim2.new(0, 70, 0, 70)
+        mobileAimButton.Position = UDim2.new(1, -80, 1, -150)
         mobileAimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
         mobileAimButton.BorderSizePixel = 0
         mobileAimButton.Text = "🎯"
@@ -1401,18 +1441,14 @@ local function createMenu()
             
             if mobileAimActive then
                 local targetCharacter = findClosestTarget()
-                
                 if targetCharacter then
                     aiming = true
                     lockedTarget = targetCharacter
-                    local part, partName = selectTargetPart(targetCharacter)
+                    local part = selectTargetPart(targetCharacter)
                     lockedTargetPart = part
                     mobileAimButton.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
                 else
                     mobileAimActive = false
-                    mobileAimButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-                    wait(0.5)
-                    mobileAimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
                 end
             else
                 mobileAimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
@@ -1493,7 +1529,7 @@ local function createKeySystem()
     description.Size = UDim2.new(1, -40, 0, 30)
     description.Position = UDim2.new(0, 20, 0, 75)
     description.BackgroundTransparency = 1
-    description.Text = "Enter your key to continue"
+    description.Text = "Enter your key to continue (Universal key: IGNIS)"
     description.TextColor3 = Color3.fromRGB(200, 200, 200)
     description.TextSize = 14
     description.Font = Enum.Font.Gotham
@@ -1767,46 +1803,65 @@ end)
 
 if isMobile then
     RunService.RenderStepped:Connect(function()
+        if not aimEnabled then return end
+        
+        if autoAim and not aiming then
+            local targetCharacter = findClosestTarget()
+            if targetCharacter then
+                aiming = true
+                lockedTarget = targetCharacter
+                local part = selectTargetPart(targetCharacter)
+                lockedTargetPart = part
+                
+                if mobileAimButton then
+                    mobileAimButton.BackgroundColor3 = Color3.fromRGB(0, 180, 0)
+                end
+            end
+        end
+        
         if not aiming then return end
         
         if not isTargetValid(lockedTarget, lockedTargetPart) then
-            if autoSwitchTarget then
-                local newTarget = findClosestTarget()
-                
-                if newTarget then
-                    lockedTarget = newTarget
-                    local part, partName = selectTargetPart(newTarget)
-                    lockedTargetPart = part
-                else
-                    aiming = false
-                    lockedTarget = nil
-                    lockedTargetPart = nil
-                    mobileAimActive = false
-                    if mobileAimButton then
-                        mobileAimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-                    end
-                    return
-                end
-            else
-                aiming = false
-                lockedTarget = nil
-                lockedTargetPart = nil
-                mobileAimActive = false
-                if mobileAimButton then
-                    mobileAimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-                end
-                return
+            aiming = false
+            lockedTarget = nil
+            lockedTargetPart = nil
+            mobileAimActive = false
+            if mobileAimButton then
+                mobileAimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
             end
+            return
         end
         
         if lockedTargetPart and lockedTargetPart.Parent then
             local targetPos = lockedTargetPart.Position
-            camera.CFrame = CFrame.new(camera.CFrame.Position, targetPos)
+            local cameraPos = camera.CFrame.Position
+            
+            if smoothAim then
+                local targetDirection = (targetPos - cameraPos).Unit
+                local currentLook = camera.CFrame.LookVector
+                
+                local smoothedLook = currentLook:Lerp(targetDirection, aimSmoothness)
+                
+                camera.CFrame = CFrame.new(cameraPos, cameraPos + smoothedLook)
+            else
+                camera.CFrame = CFrame.new(cameraPos, targetPos)
+            end
         end
     end)
 else
     RunService.RenderStepped:Connect(function()
         if not aimEnabled then return end
+        
+        if autoAim and not aiming then
+            local targetCharacter = findClosestTarget()
+            if targetCharacter then
+                aiming = true
+                lockedTarget = targetCharacter
+                local part = selectTargetPart(targetCharacter)
+                lockedTargetPart = part
+            end
+        end
+        
         if not aiming then return end
         
         if not isTargetValid(lockedTarget, lockedTargetPart) then
@@ -1833,7 +1888,18 @@ else
         
         if lockedTargetPart and lockedTargetPart.Parent then
             local targetPos = lockedTargetPart.Position
-            camera.CFrame = CFrame.new(camera.CFrame.Position, targetPos)
+            local cameraPos = camera.CFrame.Position
+            
+            if smoothAim then
+                local targetDirection = (targetPos - cameraPos).Unit
+                local currentLook = camera.CFrame.LookVector
+                
+                local smoothedLook = currentLook:Lerp(targetDirection, aimSmoothness)
+                
+                camera.CFrame = CFrame.new(cameraPos, cameraPos + smoothedLook)
+            else
+                camera.CFrame = CFrame.new(cameraPos, targetPos)
+            end
         end
     end)
 end
